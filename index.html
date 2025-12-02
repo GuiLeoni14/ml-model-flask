@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎮 Pokémon Type Classifier - XGBoost ML</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffd93d 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #c92a2a 0%, #ff922b 100%);
+            color: white;
+            padding: 30px 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        /* Navigation */
+        nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        nav button {
+            padding: 12px 24px;
+            border: none;
+            background: #e0e0e0;
+            color: #333;
+            cursor: pointer;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 1em;
+        }
+
+        nav button.active {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffd93d 100%);
+            color: white;
+        }
+
+        nav button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Pages */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.8em;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert.error {
+            background: #ffe0e0;
+            color: #c92a2a;
+            border-left: 4px solid #c92a2a;
+        }
+
+        .alert.success {
+            background: #e0ffe0;
+            color: #2e8b57;
+            border-left: 4px solid #2e8b57;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffd93d 100%);
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffd93d 100%);
+            cursor: pointer;
+            border: none;
+        }
+
+        .range-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 5px;
+        }
+
+        .range-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ff6b6b;
+        }
+
+        /* Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Buttons */
+        button.btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1em;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffd93d 100%);
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Results */
+        .result-box {
+            background: linear-gradient(135deg, #fff5e6 0%, #fff9e6 100%);
+            border-radius: 10px;
+            padding: 30px;
+            margin: 20px 0;
+            border: 2px solid #ffd93d;
+        }
+
+        .result-header {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ff6b6b;
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            margin: 5px;
+            font-size: 1.1em;
+        }
+
+        /* Type Colors */
+        .type-Fire { background: #FF7F27; }
+        .type-Water { background: #4DB8FF; }
+        .type-Grass { background: #78C850; }
+        .type-Electric { background: #FFD700; color: #333; }
+        .type-Psychic { background: #FF69B4; }
+        .type-Ice { background: #98D8D8; color: #333; }
+        .type-Dragon { background: #7038F8; }
+        .type-Dark { background: #705848; }
+        .type-Fairy { background: #FFB6C1; color: #333; }
+        .type-Fighting { background: #C03028; }
+        .type-Flying { background: #A890F0; }
+        .type-Poison { background: #A040A0; }
+        .type-Ground { background: #E0C068; color: #333; }
+        .type-Rock { background: #B8A038; }
+        .type-Bug { background: #A8B820; }
+        .type-Ghost { background: #705898; }
+        .type-Steel { background: #B8B8D0; color: #333; }
+        .type-Normal { background: #A8A878; }
+
+        /* Progress Bar */
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #ddd;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ffd93d);
+            transition: width 0.3s;
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #f5f5f5;
+            font-weight: bold;
+            color: #333;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        /* Textarea */
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            resize: vertical;
+            margin: 10px 0;
+        }
+
+        /* Loading */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #ff6b6b;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            nav {
+                flex-direction: column;
+            }
+
+            nav button {
+                width: 100%;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .info-card h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .info-card p {
+            margin: 8px 0;
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .metric {
+            margin: 15px 0;
+        }
+
+        .metric-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .metric-bar {
+            width: 100%;
+            height: 8px;
+            background: #ddd;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .metric-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ffd93d);
+            transition: width 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🔴 Pokémon Type Classifier</h1>
+            <p>Machine Learning com XGBoost - Classifique tipos de Pokémon!</p>
+        </header>
+
+        <!-- Navigation -->
+        <nav>
+            <button class="nav-btn active" data-page="predictor">🎯 Preditor</button>
+            <button class="nav-btn" data-page="batch">📦 Lote</button>
+            <button class="nav-btn" data-page="info">📊 Modelo</button>
+        </nav>
+
+        <!-- Alerts -->
+        <div id="alert" class="alert"></div>
+
+        <!-- Pages -->
+        <!-- Page: Predictor -->
+        <div id="predictor" class="page active">
+            <div class="card">
+                <h2>🎮 Predição de Tipo Pokémon</h2>
+                <p style="margin-bottom: 20px; color: #666;">Ajuste os sliders para os stats do Pokémon e descubra seu tipo!</p>
+
+                <div class="grid">
+                    <div class="form-group">
+                        <label>HP - Pontos de Vida</label>
+                        <input type="range" id="hp" min="1" max="255" value="100">
+                        <div class="range-display">
+                            <span class="range-value" id="hp-value">100</span>
+                            <span style="color: #999;">1 - 255</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Attack - Ataque Físico</label>
+                        <input type="range" id="attack" min="5" max="165" value="100">
+                        <div class="range-display">
+                            <span class="range-value" id="attack-value">100</span>
+                            <span style="color: #999;">5 - 165</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Defense - Defesa Física</label>
+                        <input type="range" id="defense" min="5" max="250" value="100">
+                        <div class="range-display">
+                            <span class="range-value" id="defense-value">100</span>
+                            <span style="color: #999;">5 - 250</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Sp. Atk - Ataque Especial</label>
+                        <input type="range" id="sp_atk" min="20" max="154" value="100">
+                        <div class="range-display">
+                            <span class="range-value" id="sp_atk-value">100</span>
+                            <span style="color: #999;">20 - 154</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Sp. Def - Defesa Especial</label>
+                        <input type="range" id="sp_def" min="20" max="250" value="100">
+                        <div class="range-display">
+                            <span class="range-value" id="sp_def-value">100</span>
+                            <span style="color: #999;">20 - 250</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Speed - Velocidade</label>
+                        <input type="range" id="speed" min="5" max="180" value="100">
+                        <div class="range-display">
+                            <span class="range-value" id="speed-value">100</span>
+                            <span style="color: #999;">5 - 180</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" id="predict-btn">🚀 Classificar Tipo!</button>
+            </div>
+
+            <div id="result-container"></div>
+        </div>
+
+        <!-- Page: Batch -->
+        <div id="batch" class="page">
+            <div class="card">
+                <h2>📦 Predição em Lote</h2>
+                <p style="margin-bottom: 20px; color: #666;">Insira múltiplos Pokémons em formato CSV (HP, Attack, Defense, Sp. Atk, Sp. Def, Speed)</p>
+
+                <textarea id="batch-input" placeholder="100, 100, 100, 100, 100, 100&#10;80, 120, 80, 120, 80, 80&#10;60, 40, 60, 40, 60, 40"></textarea>
+
+                <button class="btn btn-primary" id="batch-btn">⚡ Processar Lote</button>
+            </div>
+
+            <div id="batch-result"></div>
+        </div>
+
+        <!-- Page: Info -->
+        <div id="info" class="page">
+            <div class="card">
+                <h2>📊 Informações do Modelo</h2>
+                <div id="model-info"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+
+        // Type colors mapping
+        const typeColors = {
+            'Fire': '#FF7F27', 'Water': '#4DB8FF', 'Grass': '#78C850', 'Electric': '#FFD700',
+            'Psychic': '#FF69B4', 'Ice': '#98D8D8', 'Dragon': '#7038F8', 'Dark': '#705848',
+            'Fairy': '#FFB6C1', 'Fighting': '#C03028', 'Flying': '#A890F0', 'Poison': '#A040A0',
+            'Ground': '#E0C068', 'Rock': '#B8A038', 'Bug': '#A8B820', 'Ghost': '#705898',
+            'Steel': '#B8B8D0', 'Normal': '#A8A878'
+        };
+
+        // Update range displays
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                const valueDisplay = document.getElementById(e.target.id + '-value');
+                if (valueDisplay) valueDisplay.textContent = e.target.value;
+            });
+        });
+
+        // Navigation
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                
+                e.target.classList.add('active');
+                const pageId = e.target.dataset.page;
+                document.getElementById(pageId).classList.add('active');
+
+                if (pageId === 'info') loadModelInfo();
+            });
+        });
+
+        // Show alert
+        function showAlert(message, type) {
+            const alertEl = document.getElementById('alert');
+            alertEl.textContent = message;
+            alertEl.className = `alert show ${type}`;
+            setTimeout(() => alertEl.classList.remove('show'), 5000);
+        }
+
+        // Predict button
+        document.getElementById('predict-btn').addEventListener('click', async () => {
+            const features = [
+                parseFloat(document.getElementById('hp').value),
+                parseFloat(document.getElementById('attack').value),
+                parseFloat(document.getElementById('defense').value),
+                parseFloat(document.getElementById('sp_atk').value),
+                parseFloat(document.getElementById('sp_def').value),
+                parseFloat(document.getElementById('speed').value)
+            ];
+
+            const btn = document.getElementById('predict-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Processando...';
+
+            try {
+                const response = await fetch(`${API_URL}/predict`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ features })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) throw new Error(data.error);
+
+                displayPredictionResult(data);
+                showAlert('✅ Predição realizada com sucesso!', 'success');
+            } catch (error) {
+                showAlert('❌ Erro: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🚀 Classificar Tipo!';
+            }
+        });
+
+        // Display prediction result
+        function displayPredictionResult(data) {
+            const html = `
+                <div class="result-box">
+                    <h3 style="margin-bottom: 20px;">Resultado da Predição</h3>
+                    
+                    <div class="result-header">
+                        <div class="stat-box">
+                            <div class="stat-label">Tipo Predito</div>
+                            <div style="margin: 10px 0;">
+                                <span class="type-badge type-${data.type}" style="background: ${typeColors[data.type] || '#999'}; color: white;">
+                                    ${data.type}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Confiança</div>
+                            <div class="stat-value">${(data.confidence * 100).toFixed(1)}%</div>
+                        </div>
+                    </div>
+
+                    <h4 style="margin-bottom: 15px;">Top 3 Tipos Prováveis</h4>
+                    ${Object.entries(data.top_3).map(([type, prob], idx) => `
+                        <div style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <span style="font-weight: bold;">${idx + 1}º - ${type}</span>
+                                <span>${(prob * 100).toFixed(1)}%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${prob * 100}%"></div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            document.getElementById('result-container').innerHTML = html;
+        }
+
+        // Batch predict
+        document.getElementById('batch-btn').addEventListener('click', async () => {
+            const input = document.getElementById('batch-input').value;
+            if (!input.trim()) {
+                showAlert('⚠️ Insira dados para predição', 'error');
+                return;
+            }
+
+            const samples = input.trim().split('\n').map(line =>
+                line.split(',').map(val => parseFloat(val.trim()))
+            );
+
+            const btn = document.getElementById('batch-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>Processando...';
+
+            try {
+                const response = await fetch(`${API_URL}/predict/batch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ samples })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error);
+
+                displayBatchResults(data.results);
+                showAlert('✅ Predições em lote concluídas!', 'success');
+            } catch (error) {
+                showAlert('❌ Erro: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '⚡ Processar Lote';
+            }
+        });
+
+        // Display batch results
+        function displayBatchResults(results) {
+            const html = `
+                <div class="card">
+                    <h3>Resultados (${results.length} Pokémons)</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Tipo</th>
+                                <th>Confiança</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${results.map(r => `
+                                <tr>
+                                    <td>${r.sample_id + 1}</td>
+                                    <td>
+                                        <span class="type-badge" style="background: ${typeColors[r.type] || '#999'}; color: white;">
+                                            ${r.type}
+                                        </span>
+                                    </td>
+                                    <td>${(r.confidence * 100).toFixed(1)}%</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            document.getElementById('batch-result').innerHTML = html;
+        }
+
+        // Load model info
+        async function loadModelInfo() {
+            try {
+                const response = await fetch(`${API_URL}/model/info`);
+                const data = await response.json();
+
+                const html = `
+                    <div class="info-grid">
+                        <div class="info-card">
+                            <h3>⚙️ Configuração</h3>
+                            <p><strong>Algoritmo:</strong> ${data.algorithm}</p>
+                            <p><strong>Dataset:</strong> ${data.dataset}</p>
+                            <p><strong>Tipos:</strong> ${data.metrics.num_classes}</p>
+                            <p><strong>Pokémons:</strong> ${data.metrics.total_pokemon}</p>
+                        </div>
+
+                        <div class="info-card">
+                            <h3>📈 Métricas</h3>
+                            <div class="metric">
+                                <div class="metric-label">
+                                    <span>Acurácia</span>
+                                    <span>${(data.metrics.accuracy * 100).toFixed(2)}%</span>
+                                </div>
+                                <div class="metric-bar">
+                                    <div class="metric-fill" style="width: ${data.metrics.accuracy * 100}%"></div>
+                                </div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">
+                                    <span>Precisão</span>
+                                    <span>${(data.metrics.precision * 100).toFixed(2)}%</span>
+                                </div>
+                                <div class="metric-bar">
+                                    <div class="metric-fill" style="width: ${data.metrics.precision * 100}%"></div>
+                                </div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-label">
+                                    <span>F1-Score</span>
+                                    <span>${(data.metrics.f1 * 100).toFixed(2)}%</span>
+                                </div>
+                                <div class="metric-bar">
+                                    <div class="metric-fill" style="width: ${data.metrics.f1 * 100}%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="info-card">
+                            <h3>📚 Dados</h3>
+                            <p><strong>Treino:</strong> ${data.metrics.train_size}</p>
+                            <p><strong>Teste:</strong> ${data.metrics.test_size}</p>
+                            <p><strong>Total:</strong> ${data.metrics.train_size + data.metrics.test_size}</p>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-top: 20px; background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);">
+                        <h3>🎓 Sobre XGBoost</h3>
+                        <p>XGBoost (Extreme Gradient Boosting) é um algoritmo ensemble que combina múltiplas árvores de decisão através de boosting. Cada nova árvore é treinada para corrigir os erros das árvores anteriores, criando um modelo progressivamente melhor. É excelente para problemas de classificação multi-classe como este!</p>
+                    </div>
+                `;
+                document.getElementById('model-info').innerHTML = html;
+            } catch (error) {
+                showAlert('❌ Erro ao carregar informações: ' + error.message, 'error');
+            }
+        }
+
+        // Load model info on page load
+        window.addEventListener('load', loadModelInfo);
+    </script>
+</body>
+</html>
